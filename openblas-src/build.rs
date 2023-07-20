@@ -59,13 +59,25 @@ fn windows_msvc_system() {
 /// Add linker flag (`-L`) to path where brew installs OpenBLAS
 fn macos_system() {
     fn brew_prefix(target: &str) -> PathBuf {
-        let out = Command::new("brew")
-            .arg("--prefix")
-            .arg(target)
-            .output()
-            .expect("brew not installed");
-        assert!(out.status.success(), "`brew --prefix` failed");
-        let path = String::from_utf8(out.stdout).expect("Non-UTF8 path by `brew --prefix`");
+        #[cfg(target_arch = "aarch64")]
+        let path = match target {
+            "openblas" => "/opt/homebrew/opt/openblas",
+            "libomp" => "/opt/homebrew/opt/libomp",
+            _ => panic!("Unsupported target: {}", target),
+        }
+        .to_owned();
+
+        #[cfg(not(target_arch = "aarch64"))]
+        let path = {
+            let out = Command::new("brew")
+                .arg("--prefix")
+                .arg(target)
+                .output()
+                .expect("brew not installed");
+            assert!(out.status.success(), "`brew --prefix` failed");
+            String::from_utf8(out.stdout).expect("Non-UTF8 path by `brew --prefix`")
+        };
+
         PathBuf::from(path.trim())
     }
     let openblas = brew_prefix("openblas");
